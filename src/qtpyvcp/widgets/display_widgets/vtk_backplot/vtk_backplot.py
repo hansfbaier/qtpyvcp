@@ -387,6 +387,7 @@ class VTKBackPlot(QVTKRenderWindowInteractor, VCPWidget, BaseBackPlot):
 
         self.renderer_window = self.GetRenderWindow()
         self.renderer_window.AddRenderer(self.renderer)
+        self.renderer_window.SetMultiSamples(0)
 
         # self.nav_style = vtk.vtkInteractorStyleTrackballCamera()
         self.nav_style = vtk.vtkInteractorStyleMultiTouchCamera() if self.touch_enabled else None
