@@ -253,10 +253,11 @@ def issue_mdi(command, reset=True):
             # Use space separator for regular G-code (allows ';' comments in manual MDI)
             command = f"{g96_params} {command}"
         LOG.debug(f"Prepending G96 to preserve CSS mode: {command}")
-        # Allow mode reset for work offset commands (G10, G92) to ensure UI updates
-        # Only prevent reset for other commands to avoid extra synch() calls
-        if 'G10' not in cmd_upper and 'G92' not in cmd_upper:
-            reset = False  # Don't reset mode to prevent additional synch()
+        # Keep users in sync with their original mode when issuing MDI from
+        # MANUAL/AUTO, but preserve the no-reset optimization when already in MDI.
+        # This avoids leaving manual users stranded in MDI after subroutine/tool commands.
+        if 'G10' not in cmd_upper and 'G92' not in cmd_upper and STAT.task_mode == linuxcnc.MODE_MDI:
+            reset = False
     
     global PREVIOUS_MODE
     if reset:
@@ -271,13 +272,17 @@ def issue_mdi(command, reset=True):
         # Clear PREVIOUS_MODE to prevent any automatic reset
         PREVIOUS_MODE = None
 
-    if setTaskMode(linuxcnc.MODE_MDI):
+    mode_ready = STAT.task_mode == linuxcnc.MODE_MDI or setTaskMode(linuxcnc.MODE_MDI)
+
+    if mode_ready:
         # issue multiple MDI commands separated by ';'
         for cmd in command.strip().split(';'):
             LOG.info("Issuing MDI command: %s", cmd)
             CMD.mdi(cmd)
+        return True
     else:
         LOG.error("Failed to issue MDI command: {}".format(command))
+        return False
 
 def _issue_mdi_ok(mdi_cmd='', widget=None):
     if STAT.task_state == linuxcnc.STATE_ON \
