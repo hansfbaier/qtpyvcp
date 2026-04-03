@@ -207,10 +207,7 @@ class GcodeSyntaxHighlighter(QSyntaxHighlighter):
     def highlightBlock(self, text):
         """Apply syntax highlighting to the given block of text.
         """
-
-        QApplication.processEvents()
         LOG.debug(f'Highlight light block:  {text}')
-
 
         for regex, fmt in self.rules:
 
