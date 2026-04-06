@@ -1155,6 +1155,9 @@ class GcodeTextEdit(QPlainTextEdit):
         doc.setDocumentLayout(QPlainTextDocumentLayout(doc))
         doc.setPlainText(p_str)
 
+        # Always set the default font on the document
+        doc.setDefaultFont(self.font())
+
         # start syntax highlighting
         if self.syntax_highlighting == True:
             self.gCodeHighlighter = GcodeSyntaxHighlighter(doc, self.font)
