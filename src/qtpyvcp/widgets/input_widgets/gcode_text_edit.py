@@ -1134,7 +1134,9 @@ class GcodeTextEdit(QPlainTextEdit):
     @Slot(bool)
     def syntaxHighlightingOnOff(self, state):
         """Toggle syntax highlighting on/off"""
-        pass
+        self.syntax_highlighting = state
+        # Reload text to apply/remove syntax highlighting
+        self.setPlainText(self.toPlainText())
 
     @Property(bool)
     def syntaxHighlighting(self):
