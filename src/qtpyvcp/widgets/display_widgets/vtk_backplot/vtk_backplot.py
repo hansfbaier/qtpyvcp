@@ -525,6 +525,16 @@ class VTKBackPlot(QVTKRenderWindowInteractor, VCPWidget, BaseBackPlot):
             self.tool_bit_actor = ToolBitActor(self._datasource)
 
 
+            # Program-bounds state must exist before the settings below are
+            # connected: connectSetting() pushes the current (persisted) value
+            # into showProgramBounds() immediately, and that slot caches it in
+            # self.show_program_bounds. Initialising these after the connect
+            # silently reset the cache to False while the button/menu still
+            # showed the setting as on.
+            self.offset_axes = OrderedDict()
+            self.program_bounds_actors = OrderedDict()
+            self.show_program_bounds = False
+
             # view settings
             connectSetting('backplot.show-spindle', self.showSpindle)
             connectSetting('backplot.show-grid', self.showGrid)
@@ -548,10 +558,6 @@ class VTKBackPlot(QVTKRenderWindowInteractor, VCPWidget, BaseBackPlot):
                            'dwell': QColor(0, 0, 255, 255),
                            'user': QColor(0, 100, 255, 255)
                        }
-
-            self.offset_axes = OrderedDict()
-            self.program_bounds_actors = OrderedDict()
-            self.show_program_bounds = bool()
 
             # Add the observers to watch for particular events. These invoke Python functions.
             self.interactor.AddObserver("LeftButtonPressEvent", self.button_event)
@@ -866,14 +872,18 @@ class VTKBackPlot(QVTKRenderWindowInteractor, VCPWidget, BaseBackPlot):
             # Do this for each WCS.
             for wcs_index, actor in self.path_actors.items():
                 axes_actor = actor.get_axes_actor()
-                program_bounds_actor = self.program_bounds_actors[wcs_index]
+                # A load that bails out after path_actors is assigned leaves
+                # keys here with no matching bounds actor, so look it up
+                # defensively rather than letting a KeyError escape.
+                program_bounds_actor = self.program_bounds_actors.get(wcs_index)
 
                 # if wcs_index == self.active_wcs_index:
 
                 self.renderer.RemoveActor(axes_actor)
 
                 self.renderer.RemoveActor(actor)
-                self.renderer.RemoveActor(program_bounds_actor)
+                if program_bounds_actor is not None:
+                    self.renderer.RemoveActor(program_bounds_actor)
             
 
             self.path_actors.clear()
