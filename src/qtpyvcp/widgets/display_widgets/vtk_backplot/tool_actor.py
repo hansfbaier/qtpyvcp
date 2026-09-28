@@ -449,7 +449,7 @@ class ToolBitActor(vtk.vtkActor):
             transform_filter.SetTransform(transform)
             transform_filter.SetInputConnection(self.source.GetOutputPort())
             transform_filter.Update()
-            
+
             mapper = vtkPolyDataMapper()
             mapper.SetInputConnection(transform_filter.GetOutputPort())
 
@@ -460,15 +460,25 @@ class ToolBitActor(vtk.vtkActor):
             self.source = vtkCylinderSource()
             transform = vtk.vtkTransform()
 
-
-            self.source.SetHeight(self.tool.zoffset)
+            # LinuxCNC applies the tool table Z offset additively, so the real
+            # tool tip sits at machine Z = position.z - zoffset (same
+            # convention as _current_tool_tip_world). Draw the body from that
+            # tip upwards towards the spindle, |zoffset| long. abs() is
+            # required because vtkCylinderSource clamps a negative height to
+            # zero, which flattened every negative-offset tool to a disc.
+            tool_length = abs(self.tool.zoffset)
+            self.source.SetHeight(tool_length)
             self.source.SetCenter(self.tool.xoffset, self.tool.yoffset, -self.tool.zoffset/2)
             self.source.SetRadius(self.tool.diameter / 2)
             self.source.SetResolution(64)
 
             transform.RotateWXYZ(90, 1, 0, 0)
-            
-            transform.Translate(self.tool.xoffset, -self.tool.zoffset/2, self.tool.zoffset/2)
+
+            # Second argument lands in Z after the rotation: centre the body
+            # half its length above the tool tip.
+            transform.Translate(self.tool.xoffset,
+                                tool_length/2 - self.tool.zoffset,
+                                self.tool.zoffset/2)
 
             transform.RotateX(self.tool.aoffset)
             transform.RotateY(self.tool.boffset)
@@ -478,7 +488,7 @@ class ToolBitActor(vtk.vtkActor):
             transform_filter.SetTransform(transform)
             transform_filter.SetInputConnection(self.source.GetOutputPort())
             transform_filter.Update()
-            
+
             mapper = vtkPolyDataMapper()
             mapper.SetInputConnection(transform_filter.GetOutputPort())
 
@@ -533,26 +543,26 @@ class ToolBitActor(vtk.vtkActor):
         return mapper
 
     def set_position_cnc(self, position):
-        
-        
+
+
         # self.source.SetCenter(self.tool.xoffset, self.tool.yoffset, -self.tool.zoffset/2)
 
-        
+
         transform = vtk.vtkTransform()
-        
+
         transform.Translate(position[0], position[1], (position[2] - self.tool.zoffset))
-        
+
         transform.RotateX(position[3])
         transform.RotateY(position[5])
         transform.RotateZ(position[4])
-        
+
         transform.Translate(-position[0], -position[1], -(position[2] - self.tool.zoffset))
 
         self.SetUserTransform(transform)
-        
+
         self.SetPosition(position[0], position[1], position[2])
-        
-        
+
+
     def set_position(self, position):
         self.tool_position = position
 
